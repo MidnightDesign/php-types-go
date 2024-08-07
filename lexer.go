@@ -60,15 +60,12 @@ func isIdentifierChar(c rune) bool {
 	return isAlpha(c) || isNumeric(c) || c == '-'
 }
 
-func parseIdentifierToken(c *cursor[rune]) token {
-	char, eof := c.peek()
-	if eof {
-		return token{t: identifier, stringValue: ""}
-	}
+func (l *lexer) parseIdentifierToken() token {
+	char, _ := l.chars.peek()
 	idStr := string(char)
-	c.next()
+	l.next()
 	for {
-		char, eof = c.peek()
+		char, eof := l.chars.peek()
 		if eof {
 			break
 		}
@@ -76,20 +73,17 @@ func parseIdentifierToken(c *cursor[rune]) token {
 			break
 		}
 		idStr += string(char)
-		c.next()
+		l.next()
 	}
 	return token{t: identifier, stringValue: idStr}
 }
 
-func parseInt(c *cursor[rune]) token {
-	char, eof := c.peek()
-	if eof {
-		return token{t: integer, stringValue: ""}
-	}
+func (l *lexer) parseInt() token {
+	char, _ := l.chars.peek()
 	numStr := string(char)
-	c.next()
+	l.next()
 	for {
-		char, eof = c.peek()
+		char, eof := l.chars.peek()
 		if eof {
 			break
 		}
@@ -97,102 +91,140 @@ func parseInt(c *cursor[rune]) token {
 			break
 		}
 		numStr += string(char)
-		c.next()
+		l.next()
 	}
 	return token{t: integer, stringValue: numStr}
 }
 
-func skipWhitespace(c *cursor[rune]) {
+func (l *lexer) skipWhitespace() {
 	for {
-		char, eof := c.peek()
+		char, eof := l.chars.peek()
 		if eof {
 			break
 		}
 		if !unicode.IsSpace(char) {
 			break
 		}
-		c.next()
+		l.next()
 	}
 }
 
-func parseStringLiteralToken(c *cursor[rune]) token {
-	c.next()
+func (l *lexer) parseStringLiteralToken() (token, error) {
+	l.next()
 	str := ""
 	for {
-		char, eof := c.peek()
+		char, eof := l.chars.peek()
 		if eof {
-			break
+			return token{}, newSyntaxError("unexpected end of input", newSingleCharSpan(l.location))
+		}
+		if char == '\n' {
+			return token{}, newSyntaxError("unexpected newline in string literal", newSingleCharSpan(l.location))
 		}
 		if char == '\'' {
-			c.next()
+			l.next()
 			break
 		}
 		str += string(char)
-		c.next()
+		l.next()
 	}
-	return token{t: stringLiteral, stringValue: str}
+	return token{t: stringLiteral, stringValue: str}, nil
 }
 
-func parseEllipsis(c *cursor[rune]) token {
+func (l *lexer) parseEllipsis() (token, error) {
 	periods := 0
 	for {
-		char, eof := c.peek()
+		char, eof := l.chars.peek()
 		if eof {
-			break
+			return token{}, newSyntaxError("unexpected end of input", newSingleCharSpan(l.location))
 		}
 		if char != '.' {
-			break
+			return token{}, newSyntaxError(
+				fmt.Sprintf("unexpected character: %c", char),
+				newSingleCharSpan(l.location),
+			)
 		}
 		periods++
-		c.next()
+		l.next()
 		if periods != 3 {
 			continue
 		}
 		break
 	}
-	return token{t: ellipsis, stringValue: "..."}
+	return token{t: ellipsis, stringValue: "..."}, nil
 }
 
-func lex(s string) []token {
-	var chars []rune
-	for _, char := range s {
-		chars = append(chars, char)
+func (l *lexer) next() {
+	char, eof := l.chars.peek()
+	if eof {
+		return
 	}
-	cursor := newCursor(chars)
+	l.chars.next()
+	if char == '\n' {
+		l.location.column++
+		return
+	}
+	l.location.line++
+	l.location.column = 1
+}
+
+func (l *lexer) lex() ([]token, error) {
 	tokens := make([]token, 0)
 	for {
-		char, eof := cursor.peek()
+		char, eof := l.chars.peek()
 		if eof {
 			break
 		}
 		tokenType := singleCharTokens[char]
 		if tokenType != 0 {
 			tokens = append(tokens, token{t: tokenType, stringValue: string(char)})
-			cursor.next()
+			l.next()
 			continue
 		}
 		if char == '.' {
-			tokens = append(tokens, parseEllipsis(cursor))
+			t, err := l.parseEllipsis()
+			if err != nil {
+				return nil, err
+			}
+			tokens = append(tokens, t)
 			continue
 		}
 		if char == '\'' {
-			tokens = append(tokens, parseStringLiteralToken(cursor))
+			t, err := l.parseStringLiteralToken()
+			if err != nil {
+				return nil, err
+			}
+			tokens = append(tokens, t)
 			continue
 		}
 		if unicode.IsSpace(char) {
-			skipWhitespace(cursor)
+			l.skipWhitespace()
 			continue
 		}
 		if isAlpha(char) {
-			tokens = append(tokens, parseIdentifierToken(cursor))
+			tokens = append(tokens, l.parseIdentifierToken())
 			continue
 		}
 		if isNumeric(char) {
-			tokens = append(tokens, parseInt(cursor))
+			tokens = append(tokens, l.parseInt())
 			continue
 		}
-		fmt.Printf("unexpected character: %c\n", char)
-		break
+		return nil, newSyntaxError(
+			fmt.Sprintf("unexpected character: %c", char),
+			newSingleCharSpan(l.location),
+		)
 	}
-	return tokens
+	return tokens, nil
+}
+
+type lexer struct {
+	chars    *cursor[rune]
+	location location
+}
+
+func newLexer(s string) *lexer {
+	chars := newCursor([]rune(s))
+	return &lexer{
+		chars:    chars,
+		location: newLocation(1, 1),
+	}
 }
