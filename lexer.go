@@ -46,6 +46,11 @@ var singleCharTokens = map[rune]tokenType{
 type token struct {
 	t           tokenType
 	stringValue string
+	location    span
+}
+
+func newToken(t tokenType, stringValue string, location span) token {
+	return token{t: t, stringValue: stringValue, location: location}
 }
 
 func isAlpha(r rune) bool {
@@ -61,6 +66,8 @@ func isIdentifierChar(c rune) bool {
 }
 
 func (l *lexer) parseIdentifierToken() token {
+	startLocation := l.location
+	endLocation := l.location
 	char, _ := l.chars.peek()
 	idStr := string(char)
 	l.next()
@@ -73,12 +80,14 @@ func (l *lexer) parseIdentifierToken() token {
 			break
 		}
 		idStr += string(char)
+		endLocation = l.location
 		l.next()
 	}
-	return token{t: identifier, stringValue: idStr}
+	return newToken(identifier, idStr, newSpan(startLocation, endLocation))
 }
 
 func (l *lexer) parseInt() token {
+	startLocation := l.location
 	char, _ := l.chars.peek()
 	numStr := string(char)
 	l.next()
@@ -93,7 +102,8 @@ func (l *lexer) parseInt() token {
 		numStr += string(char)
 		l.next()
 	}
-	return token{t: integer, stringValue: numStr}
+	endLocation := l.location
+	return newToken(integer, numStr, newSpan(startLocation, endLocation))
 }
 
 func (l *lexer) skipWhitespace() {
@@ -110,6 +120,7 @@ func (l *lexer) skipWhitespace() {
 }
 
 func (l *lexer) parseStringLiteralToken() (token, error) {
+	openLocation := l.location
 	l.next()
 	str := ""
 	for {
@@ -127,10 +138,12 @@ func (l *lexer) parseStringLiteralToken() (token, error) {
 		str += string(char)
 		l.next()
 	}
-	return token{t: stringLiteral, stringValue: str}, nil
+	closeLocation := l.location
+	return newToken(stringLiteral, str, newSpan(openLocation, closeLocation)), nil
 }
 
 func (l *lexer) parseEllipsis() (token, error) {
+	firstLocation := l.location
 	periods := 0
 	for {
 		char, eof := l.chars.peek()
@@ -150,7 +163,8 @@ func (l *lexer) parseEllipsis() (token, error) {
 		}
 		break
 	}
-	return token{t: ellipsis, stringValue: "..."}, nil
+	location := newSpan(firstLocation, newLocation(firstLocation.line, firstLocation.column+2))
+	return newToken(ellipsis, "...", location), nil
 }
 
 func (l *lexer) next() {
@@ -176,7 +190,7 @@ func (l *lexer) lex() ([]token, error) {
 		}
 		tokenType := singleCharTokens[char]
 		if tokenType != 0 {
-			tokens = append(tokens, token{t: tokenType, stringValue: string(char)})
+			tokens = append(tokens, newToken(tokenType, string(char), newSingleCharSpan(l.location)))
 			l.next()
 			continue
 		}
