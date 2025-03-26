@@ -20,7 +20,7 @@ type CurlyListNode struct {
 }
 type CurlyKeyValueNode struct {
 	Name    string
-	Members []MemberNode
+	Members []*MemberNode
 }
 
 type MemberNode struct {
@@ -29,12 +29,12 @@ type MemberNode struct {
 	Optional bool
 }
 
-func NewMember(key string, value Node) MemberNode {
-	return MemberNode{Key: key, Value: value, Optional: false}
+func NewMember(key string, value Node) *MemberNode {
+	return &MemberNode{Key: key, Value: value, Optional: false}
 }
 
-func NewOptionalMember(key string, value Node) MemberNode {
-	return MemberNode{Key: key, Value: value, Optional: true}
+func NewOptionalMember(key string, value Node) *MemberNode {
+	return &MemberNode{Key: key, Value: value, Optional: true}
 }
 
 func (n MemberNode) String() string {
@@ -46,7 +46,7 @@ func (n MemberNode) String() string {
 
 type CallableNode struct {
 	ReturnType Node
-	Parameters []ParamNode
+	Parameters []*ParamNode
 }
 
 type ParamNode struct {
@@ -54,15 +54,15 @@ type ParamNode struct {
 	Optional bool
 }
 
-func NewParam(typeNode Node) ParamNode {
-	return ParamNode{Type: typeNode, Optional: false}
+func NewParam(typeNode Node) *ParamNode {
+	return &ParamNode{Type: typeNode, Optional: false}
 }
 
-func NewOptionalParam(typeNode Node) ParamNode {
-	return ParamNode{Type: typeNode, Optional: true}
+func NewOptionalParam(typeNode Node) *ParamNode {
+	return &ParamNode{Type: typeNode, Optional: true}
 }
 
-func (n ParamNode) String() string {
+func (n *ParamNode) String() string {
 	if n.Optional {
 		return fmt.Sprintf("%s=", n.Type.String())
 	}
@@ -147,49 +147,40 @@ func (n IntersectionNode) String() string {
 	return strings.Join(elements, " & ")
 }
 
-// string, int, bool, Foo
-func NewSimpleNode(name string) IdentifierNode {
-	return IdentifierNode{Name: name}
+func NewSimpleNode(name string) Node {
+	return &IdentifierNode{Name: name}
 }
 
-// list<...>, array<...>
-func NewGenericNode(name string, typeArguments []Node) IdentifierNode {
-	return IdentifierNode{Name: name, TypeArguments: typeArguments}
+func NewGenericNode(name string, typeArguments []Node) Node {
+	return &IdentifierNode{Name: name, TypeArguments: typeArguments}
 }
 
-// array{string, int, bool}
-func NewCurlyListNode(name string, elements []Node) CurlyListNode {
-	return CurlyListNode{Name: name, Elements: elements}
+func NewCurlyListNode(name string, elements []Node) Node {
+	return &CurlyListNode{Name: name, Elements: elements}
 }
 
-// array{foo: string, bar: int}, object{foo: string, bar: int}
-func NewCurlyKeyValueNode(name string, members []MemberNode) CurlyKeyValueNode {
-	return CurlyKeyValueNode{Name: name, Members: members}
+func NewCurlyKeyValueNode(name string, members []*MemberNode) Node {
+	return &CurlyKeyValueNode{Name: name, Members: members}
 }
 
-// callable(): void, callable(string, int): bool
-func NewCallableNode(returnType Node, parameters []ParamNode) CallableNode {
-	return CallableNode{ReturnType: returnType, Parameters: parameters}
+func NewCallableNode(returnType Node, parameters []*ParamNode) Node {
+	return &CallableNode{ReturnType: returnType, Parameters: parameters}
 }
 
-// "foo", "bar"
-func NewStringLiteralNode(value string) StringLiteralNode {
-	return StringLiteralNode{Value: value}
+func NewStringLiteralNode(value string) Node {
+	return &StringLiteralNode{Value: value}
 }
 
-// 42, 0, 1
-func NewIntLiteralNode(value int) IntLiteralNode {
-	return IntLiteralNode{Value: value}
+func NewIntLiteralNode(value int) Node {
+	return &IntLiteralNode{Value: value}
 }
 
-// string|int, string|bool|int
-func NewUnionNode(first Node, second Node, other ...Node) UnionNode {
+func NewUnionNode(first Node, second Node, other ...Node) Node {
 	elements := append([]Node{first, second}, other...)
-	return UnionNode{Elements: elements}
+	return &UnionNode{Elements: elements}
 }
 
-// array{foo: string} & array{bar: int}
-func NewIntersectionNode(first Node, second Node, other ...Node) IntersectionNode {
+func NewIntersectionNode(first Node, second Node, other ...Node) Node {
 	elements := append([]Node{first, second}, other...)
-	return IntersectionNode{Elements: elements}
+	return &IntersectionNode{Elements: elements}
 }

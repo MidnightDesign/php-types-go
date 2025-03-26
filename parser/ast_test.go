@@ -48,20 +48,20 @@ func TestNode_String(t *testing.T) {
 			want: "array{}",
 		},
 		{
-			node: parser.NewCurlyKeyValueNode("array", []parser.MemberNode{
+			node: parser.NewCurlyKeyValueNode("array", []*parser.MemberNode{
 				parser.NewMember("foo", parser.NewSimpleNode("string")),
 			}),
 			want: "array{foo: string}",
 		},
 		{
-			node: parser.NewCurlyKeyValueNode("array", []parser.MemberNode{
+			node: parser.NewCurlyKeyValueNode("array", []*parser.MemberNode{
 				parser.NewMember("foo", parser.NewSimpleNode("string")),
 				parser.NewMember("bar", parser.NewSimpleNode("int")),
 			}),
 			want: "array{foo: string, bar: int}",
 		},
 		{
-			node: parser.NewCurlyKeyValueNode("object", []parser.MemberNode{
+			node: parser.NewCurlyKeyValueNode("object", []*parser.MemberNode{
 				parser.NewOptionalMember("foo", parser.NewSimpleNode("string")),
 				parser.NewMember("bar", parser.NewSimpleNode("int")),
 			}),
@@ -72,14 +72,14 @@ func TestNode_String(t *testing.T) {
 			want: "callable(): void",
 		},
 		{
-			node: parser.NewCallableNode(parser.NewSimpleNode("bool"), []parser.ParamNode{
+			node: parser.NewCallableNode(parser.NewSimpleNode("bool"), []*parser.ParamNode{
 				parser.NewParam(parser.NewSimpleNode("string")),
 				parser.NewParam(parser.NewSimpleNode("int")),
 			}),
 			want: "callable(string, int): bool",
 		},
 		{
-			node: parser.NewCallableNode(parser.NewSimpleNode("bool"), []parser.ParamNode{
+			node: parser.NewCallableNode(parser.NewSimpleNode("bool"), []*parser.ParamNode{
 				parser.NewParam(parser.NewSimpleNode("string")),
 				parser.NewOptionalParam(parser.NewSimpleNode("int")),
 			}),
@@ -111,10 +111,10 @@ func TestNode_String(t *testing.T) {
 		},
 		{
 			node: parser.NewIntersectionNode(
-				parser.NewCurlyKeyValueNode("array", []parser.MemberNode{
+				parser.NewCurlyKeyValueNode("array", []*parser.MemberNode{
 					parser.NewMember("foo", parser.NewSimpleNode("string")),
 				}),
-				parser.NewCurlyKeyValueNode("array", []parser.MemberNode{
+				parser.NewCurlyKeyValueNode("array", []*parser.MemberNode{
 					parser.NewMember("bar", parser.NewSimpleNode("int")),
 				}),
 			),
