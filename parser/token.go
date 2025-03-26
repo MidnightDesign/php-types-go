@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-type tokenKind int8
+type tokenKind uint8
 
 func (t tokenKind) String() string {
 	switch t {
